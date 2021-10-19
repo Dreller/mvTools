@@ -1,4 +1,4 @@
-SUBROUTINE MVLOG(I.TAG, I.TEXT, I.PGM, RV5, RV4, RV3, RV2, RV1)
+SUBROUTINE MVLOG(I.TAG, I.TEXT, I.PGM, O.ID, RV5, RV4, RV3, RV2, RV1)
 * Logging utility
 *********************************************************************
 * Description
@@ -10,7 +10,8 @@ SUBROUTINE MVLOG(I.TAG, I.TEXT, I.PGM, RV5, RV4, RV3, RV2, RV1)
 * This subroutine must be called with those arguments:
 *	I.TAG (in): Small keyword to identify the log record.
 *	I.TEXT (in): Whatever you want to be logged.
-*	I.PGM (in): Program that calls that subr.  
+*	I.PGM (in): Program that calls that subr.
+*	O.ID (out): ID of the log record.
 *	RV5 (in): Reserved for future.
 *	RV4 (in): Reserved for future.
 *	RV3 (in): Reserved for future.
@@ -30,8 +31,7 @@ EQU FILE.NAME TO "LOG.DETAIL"	;* File name where to store logs.
 	THIS.TAG  = UPCASE(I.TAG)
 	THIS.PGM  = UPCASE(I.PGM)
 	THIS.LOG  = I.TEXT
-	
-	THIS.KEY  = THIS.TAG:"*":THIS.USER:"*"THIS.DATE:"*":THIS.TIME
+
 
 	THIS.REC = ""
 	THIS.REC<1> = THIS.DATE
@@ -42,8 +42,31 @@ EQU FILE.NAME TO "LOG.DETAIL"	;* File name where to store logs.
 	THIS.REC<6> = THIS.TAG
 	THIS.REC<7> = THIS.LOG
 
-	OPEN FILE.NAME TO LOG.FILE ELSE STOP "CAN'T OPEN LOG FILE!"
-	WRITE THIS.REC TO LOG.FILE, THIS.KEY
+* Retrieve Tag control record from the DICT part
+	DICT.KEY = "$$TAG*":THIS.TAG
+	OPEN "DICT ":FILE.NAME TO DICT.FILE ELSE STOP "CANNOT OPEN DICT!"
+	READ DICT.REC FROM DICT.FILE,DICT.KEY ELSE DICT.REC = ""
+	* If the returned record is empty, set attr 1 to 0.
+		IF DICT.REC = "" THEN 
+			DICT.REC<1> = "X"
+			DICT.REC<2> = 0
+		END
+	* Calculate the new sequential number
+		SEQ.NUMBER = DICT.REC<2>+1
+	* Set the new sequantial number for that tag
+		DICT.REC<2> = SEQ.NUMBER 
+	* Save the new tag data.
+		WRITE DICT.REC TO DICT.FILE,"$$TAG*":THIS.TAG
+		CLOSE DICT.FILE
+
+	* Create the Key
+		THIS.KEY  = THIS.TAG:RIGHT(("000000":SEQ.NUMBER),6)
+	* Set O.ID to return to calling program.
+		O.ID = THIS.KEY
+
+	* Save the new log record
+		OPEN FILE.NAME TO LOG.FILE ELSE STOP "CAN'T OPEN LOG FILE!"
+		WRITE THIS.REC TO LOG.FILE, THIS.KEY
 
 	CLOSE LOG.FILE
 *********************************************************************
