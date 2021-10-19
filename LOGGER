@@ -6,7 +6,22 @@ SUBROUTINE LOGGER(I.TEXT, I.PGM, RV5, RV4, RV3, RV2, RV1)
 * TODO
 *********************************************************************
 * Parameters
-EQU FILE.NAME TO "LOG.INFO"	;* File name where to store logs.
+EQU FILE.NAME TO "LOG.DETAIL"	;* File name where to store logs.
 *********************************************************************
+* Mainline
+	GOSUB 100 	;* Prepare data to store in the record.
+	GOSUB 500	;* Create record in log file.
+RETURN
+*********************************************************************
+* Prepare data to store in the new record
+100:
 
 RETURN
+*********************************************************************
+* Create the new record in log file
+500:
+
+RETURN 
+*********************************************************************
+END
+
