@@ -1,0 +1,51 @@
+SUBROUTINE MVLOG(I.TAG, I.TEXT, I.PGM, RV5, RV4, RV3, RV2, RV1)
+* Logging utility
+*********************************************************************
+* Description
+* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+* TODO
+*********************************************************************
+* Arguments
+* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+* This subroutine must be called with those arguments:
+*	I.TAG (in): Small keyword to identify the log record.
+*	I.TEXT (in): Whatever you want to be logged.
+*	I.PGM (in): Program that calls that subr.  
+*	RV5 (in): Reserved for future.
+*	RV4 (in): Reserved for future.
+*	RV3 (in): Reserved for future.
+*	RV2 (in): Reserved for future.
+*	RV1 (in): Reserved for future.
+*********************************************************************
+* Parameters
+EQU FILE.NAME TO "LOG.DETAIL"	;* File name where to store logs.
+*********************************************************************
+* Prepare data to store in the new record
+
+	THIS.DATE = @DATE
+	THIS.TIME = @TIME
+	THIS.USER = @LOGNAME
+	THIS.ACCT = @ACCOUNT
+	
+	THIS.TAG  = UPCASE(I.TAG)
+	THIS.PGM  = UPCASE(I.PGM)
+	THIS.LOG  = I.TEXT
+	
+	THIS.KEY  = THIS.TAG:"*":THIS.USER:"*"THIS.DATE:"*":THIS.TIME
+
+	THIS.REC = ""
+	THIS.REC<1> = THIS.DATE
+	THIS.REC<2> = THIS.TIME
+	THIS.REC<3> = THIS.ACCT
+	THIS.REC<4> = THIS.PGM
+	THIS.REC<5> = THIS.USER
+	THIS.REC<6> = THIS.TAG
+	THIS.REC<7> = THIS.LOG
+
+	OPEN FILE.NAME TO LOG.FILE ELSE STOP "CAN'T OPEN LOG FILE!"
+	WRITE THIS.REC TO LOG.FILE, THIS.KEY
+
+	CLOSE LOG.FILE
+*********************************************************************
+END
+
