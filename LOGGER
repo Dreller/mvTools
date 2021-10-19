@@ -5,6 +5,8 @@ SUBROUTINE LOGGER(I.TEXT, I.PGM, RV5, RV4, RV3, RV2, RV1)
 * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 * TODO
 *********************************************************************
-
+* Parameters
+EQU FILE.NAME TO "LOG.INFO"	;* File name where to store logs.
+*********************************************************************
 
 RETURN
