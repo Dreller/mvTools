@@ -7,7 +7,8 @@ This tool is a simple logging subroutine.
    I.TEXT (in): Whatever you want to be logged.
    I.PGM (in): Program name that calls that subr.
    O.ID (out): ID of the new record, to return to calling pgm.
-   RV5,4,3,2,1: Reserved for future usage.`
+   O.MSG (out): Message for the calling program. If something is wrong while logging the info, details will be provided there.  Otherwise, it will returns "OK".
+   RV4,3,2,1: Reserved for future usage.`
 
 ### Setup
 Update EQUate FILE.NAME to the file name where you want the log record to be created.

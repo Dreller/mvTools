@@ -1,4 +1,4 @@
-SUBROUTINE MVLOG(I.TAG, I.TEXT, I.PGM, O.ID, RV5, RV4, RV3, RV2, RV1)
+SUBROUTINE MVLOG(LOG.TAG, LOG.LEVEL, LOG.TEXT, LOG.PGM, LOG.ID, LOG.MSG, RV4, RV3, RV2, RV1)
 * Logging utility
 *********************************************************************
 * Description
@@ -8,11 +8,14 @@ SUBROUTINE MVLOG(I.TAG, I.TEXT, I.PGM, O.ID, RV5, RV4, RV3, RV2, RV1)
 * Arguments
 * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 * This subroutine must be called with those arguments:
-*	I.TAG (in): Small keyword to identify the log record.
-*	I.TEXT (in): Whatever you want to be logged.
-*	I.PGM (in): Program that calls that subr.
-*	O.ID (out): ID of the log record.
-*	RV5 (in): Reserved for future.
+*	TAG (in): Small keyword to identify the log record.
+*	LEVEL (in): Level of priority for log.  Standard entries:
+*				FATAL, ERROR, WARN, INFO, DEBUG.
+*	TEXT (in): Whatever you want to be logged.
+*	PGM (in): Program that calls that subr.
+*	ID (in/out): ID of the log record.
+*	MSG (out): Message to the calling program if something
+*			     went wrong.  Otherwise, it's "OK".
 *	RV4 (in): Reserved for future.
 *	RV3 (in): Reserved for future.
 *	RV2 (in): Reserved for future.
@@ -20,28 +23,44 @@ SUBROUTINE MVLOG(I.TAG, I.TEXT, I.PGM, O.ID, RV5, RV4, RV3, RV2, RV1)
 *********************************************************************
 * Parameters
 EQU FILE.NAME TO "LOG.DETAIL"	;* File name where to store logs.
+EQU DEFAULT.LEVEL TO "INFO"		;* Level to use if passed level is not valid.
 *********************************************************************
-* Prepare data to store in the new record
+* Validate if target file exists.  If the VOC entry is not type F
+* or type Q, we will not be able to write to that target, end program.
+	FTEST = TRANS("VOC", FILE.NAME, 1, "X")
+	FTEST = UPCASE(LEFT(FTEST,1))
+	IF FTEST # "F" AND FTEST # "Q" THEN
+		LOG.MSG = "Target '":FILE.NAME:"' is not a file!"
+		RETURN
+	END
 
+* Retrive data from parameters.
 	THIS.DATE = @DATE
 	THIS.TIME = @TIME
 	THIS.USER = @LOGNAME
 	THIS.ACCT = @ACCOUNT
 	
-	THIS.TAG  = UPCASE(I.TAG)
-	THIS.PGM  = UPCASE(I.PGM)
-	THIS.LOG  = I.TEXT
+	THIS.TAG  = UPCASE(LOG.TAG)
+	THIS.PGM  = UPCASE(LOG.PGM)
+	THIS.LOG  = LOG.TEXT
+	THIS.LEVEL= UPCASE(LOG.LEVEL)
 
+	* Clean Level
+	LEVELS=""
+	LEVELS<-1> = "FATAL"
+	LEVELS<-1> = "WARN"
+	LEVELS<-1> = "ERROR"
+	LEVELS<-1> = "INFO"
+	LEVELS<-1> = "DEBUG"
+	LEVEL.NDX = 0
+	LOCATE(THIS.LEVEL, LEVELS;LEVEL.NDX) ELSE 
+		LOG.MSG = "Level '":THIS.LEVEL:"' is not valid."
+		THIS.LEVEL = DEFAULT.LEVEL
+	END
 
-	THIS.REC = ""
-	THIS.REC<1> = THIS.DATE
-	THIS.REC<2> = THIS.TIME
-	THIS.REC<3> = THIS.ACCT
-	THIS.REC<4> = THIS.PGM
-	THIS.REC<5> = THIS.USER
-	THIS.REC<6> = THIS.TAG
-	THIS.REC<7> = THIS.LOG
-
+* Create the record ID
+* -------------------------------------------------------------------
+IF LOG.ID = "" THEN 
 * Retrieve Tag control record from the DICT part
 	DICT.KEY = "$$TAG*":THIS.TAG
 	OPEN "DICT ":FILE.NAME TO DICT.FILE ELSE STOP "CANNOT OPEN DICT!"
@@ -58,17 +77,45 @@ EQU FILE.NAME TO "LOG.DETAIL"	;* File name where to store logs.
 	* Save the new tag data.
 		WRITE DICT.REC TO DICT.FILE,"$$TAG*":THIS.TAG
 		CLOSE DICT.FILE
-
 	* Create the Key
 		THIS.KEY  = THIS.TAG:RIGHT(("000000":SEQ.NUMBER),6)
 	* Set O.ID to return to calling program.
-		O.ID = THIS.KEY
+		LOG.ID = THIS.KEY
+END ELSE
+	THIS.KEY = LOG.ID
+END
+
+* Read the log record from the file
+	OPEN FILE.NAME TO LOG.FILE ELSE STOP "CAN'T OPEN LOG FILE!"
+	READU LOG.REC FROM LOG.FILE,THIS.KEY ELSE LOG.REC = ""
+
+	* If no record is read, create a new record.
+	IF LOG.REC = "" THEN 
+		LOG.REC<1> = THIS.DATE		;* Start Date
+		LOG.REC<2> = THIS.TIME		;* Start Time
+		LOG.REC<3> = THIS.ACCT
+		LOG.REC<4> = THIS.PGM
+		LOG.REC<5> = THIS.USER
+		LOG.REC<6> = THIS.TAG
+		LOG.REC<7> = THIS.LEVEL
+		LOG.REC<8> = THIS.LOG		
+		LOG.REC<9> = THIS.DATE 		;* End Date
+		LOG.REC<10> = THIS.TIME		;* End Time
+	END ELSE 	
+	* If a record is read, append info to MV data and update
+	* End Date/Time.
+		LOG.REC<7,-1> = THIS.LEVEL 
+		LOG.REC<8,-1> = THIS.LOG
+		LOG.REC<9> = THIS.DATE 		;* End Date
+		LOG.REC<10> = THIS.TIME		;* End time
+	END
 
 	* Save the new log record
-		OPEN FILE.NAME TO LOG.FILE ELSE STOP "CAN'T OPEN LOG FILE!"
-		WRITE THIS.REC TO LOG.FILE, THIS.KEY
+		WRITE LOG.REC TO LOG.FILE, THIS.KEY
+		CLOSE LOG.FILE 
 
-	CLOSE LOG.FILE
+	* Set the OK message because everything is OK.
+		IF LOG.MSG = "" THEN LOG.MSG = "OK"
 *********************************************************************
 END
 

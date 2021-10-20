@@ -1,0 +1,27 @@
+SUBROUTINE MVDICT(FILE.NAME, DICT.NAME, DICT)
+* Dictionnary maintenance utility
+*********************************************************************
+* Description
+* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+* TODO
+*********************************************************************
+* Arguments
+* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+* This subroutine must called with those parameters:
+*   FILE.NAME:   Name of the file where to create the DICT.  
+*   DICT.NAME:  Name of the attribute.
+*   DICT:       DICT Record.
+*	
+*********************************************************************
+OPEN "DICT ":FILE.NAME TO DICT.FILE ELSE STOP "CAN'T OPEN DICT ":FILE.NAME:"!"
+READU DICT.REC FROM DICT.FILE,DICT.NAME ELSE DICT.REC = ""
+DICT.REC = DICT 
+WRITE DICT.REC TO DICT.FILE,DICT.NAME 
+CLOSE DICT.FILE 
+
+* Compile I-DESC
+IF LEFT(DICT<1>,1) = "I" THEN 
+    EXECUTE "CD ":FILE.NAME:" ":DICT.NAME
+END
+
+END
